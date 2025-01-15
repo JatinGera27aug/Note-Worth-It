@@ -10,7 +10,7 @@ router.post('/create-note', authMiddleware, upload.single('image'),  NotesContro
 router.get('/question-gen/:notesId', NotesController.NotesToQuestion);
 router.get('/summary/:notesId', NotesController.notesSummary);
 // router.get('/extract-note', NotesController.TextfromImage);
-
+router.post('/translate/:notesId', authMiddleware, NotesController.translateNote);
 
 
 module.exports = router;

@@ -51,7 +51,7 @@ class NotesController {
                     console.log(uniqueKey, cacheKey);
 
                     // Check if text is already cached
-                    const cachedText = await redisClient.get(cacheKey); 
+                    const cachedText = await redisClient.get(cacheKey);
                     if (cachedText) {
                         console.log('Cache hit:', cacheKey);
                         finalDescription = cachedText;
@@ -141,8 +141,8 @@ class NotesController {
             // Cache the result
             await redisClient.set(`questions:${notesId}`, JSON.stringify(questionsResponse), 'EX', 3600);
 
-            // return res.status(200).json(questionsResponse);
-            return res.status(200).json({ message: "Gemini API is working" });
+            return res.status(200).json(newQuestions.questions);  // ya TO DIRECT DB SE FRONTEND
+            // return res.status(200).json({ message: "Gemini API is working" });
         }
         catch (err) {
             return res.status(500).json(err);
@@ -197,6 +197,47 @@ class NotesController {
         }
     };
 
+    // notes translation to another language
+    static translateNote = async (req, res) => {
+        const { notesId } = req.params;
+        const { targetLanguage } = req.body;
+        const user = req.user._id;
+
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const notes = await Notes.findOne({ _id: notesId, user });
+            if (!notes) {
+                return res.status(404).json("No notes found");
+            }
+
+            const translatedDescription = await geminiService.translateText(
+                notes.description, 
+                targetLanguage,
+            );
+            console.log(translatedDescription);
+
+            // Update the notes
+            notes.translatedLanguage = targetLanguage;
+            notes.translatedDescription = translatedDescription;
+            await notes.save();
+
+            return res.status(200).json({
+                originalNote: notes,
+                translatedDescription: translatedDescription,
+                targetLanguage: targetLanguage
+            });
+
+        }
+        catch (error) {
+            console.error('Note Translation Error:', error);
+            return res.status(500).json({ message: "Translation failed", error: error.message });
+        }
+    };
+
     // image reading (integrated with parent function)
     // static TextfromImage = async (req, res) => {
     //     try {
@@ -216,3 +257,5 @@ class NotesController {
 }
 
 module.exports = NotesController;
+
+// rate limit will not be hindered as i will use cron job to scrape at a particular time only for the latest date event only , and will cache then so no more web scraping request  

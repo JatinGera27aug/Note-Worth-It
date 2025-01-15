@@ -24,6 +24,18 @@ const notesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "auth"
     },
+    translatedLanguage: {
+        type: String,
+        default: null
+    },
+    translatedDescription: {
+        type: String,
+        default: null
+    },
+    translationTimestamp: {
+        type: Date,
+        default: null
+    },
 },
     { timestamps: true }
 );

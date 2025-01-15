@@ -106,6 +106,24 @@ class GeminiAIService {
     return mimeTypes[ext] || 'application/octet-stream';
   }
 
+
+  // text translation
+  async translateText(text, targetLanguage, sourceLanguage = 'auto') {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+      
+      const prompt = sourceLanguage === 'auto' 
+        ? `Translate the entire text to ${targetLanguage}, preserving its original formatting and meaning.:` 
+        : `Translate the following text from ${sourceLanguage} to ${targetLanguage}:`;
+  
+      const result = await model.generateContent(`${prompt}\n\n${text}`);
+      return result.response.text();
+    } catch (error) {
+      console.error('Text Translation Failed:', error);
+      throw error;
+    }
+  }
+
   // Method to clear cache
   clearCache() {
     this.cache.clear();

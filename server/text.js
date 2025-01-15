@@ -17,3 +17,26 @@ This initiative builds upon the success of the Watershed Development Component o
 console.log(typeof(text))
 
 export default text;
+
+
+// ---- Suggested Server-Side Logic (Example in Node.js): ----
+
+function processAIOutput(rawText) {
+  const questions = [];
+  const regex = /Question \d+:.*?\*\*Q:\*\* (.*?)\n\n\*\*A:\*\* (.*?)(?:\n\n\*\*Key Points:.*?(\*.*?)+)?/gs;
+
+  let match;
+  while ((match = regex.exec(rawText)) !== null) {
+    questions.push({
+      question: match[1].trim(),
+      answer: match[2].trim(),
+    });
+  }
+
+  return questions;
+}
+
+// Example Usage
+const rawOutput = `...AI GENERATED OUTPUT...`;
+const structuredQuestions = processAIOutput(rawOutput);
+console.log(structuredQuestions);

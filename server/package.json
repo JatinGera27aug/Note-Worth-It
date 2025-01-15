@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A simple notes app with features like text input, image-to-text conversion, and question generation.",
   "main": "app.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon app.js",
@@ -19,8 +20,10 @@
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@langchain/openai": "^0.3.17",
+    "axios": "^1.7.9",
     "backend-maker-cli": "^1.0.16",
     "bcrypt": "^5.1.1",
+    "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
