@@ -16,6 +16,10 @@ const notesSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    image: {
+        type: String, // Path or URL to the uploaded image
+        required: false, // Not required, as notes can exist without an image
+    },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "auth"

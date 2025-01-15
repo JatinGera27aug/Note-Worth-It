@@ -1,4 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 class GeminiAIService {
@@ -60,6 +62,53 @@ class GeminiAIService {
     ]);
 
     return result.response.text();
+  }
+
+  // Image text reading method
+  async readTextFromImage(imagePath, prompt = "Extract all text from this image including headings as well") {
+    try {
+      // Validate image file
+      if (!fs.existsSync(imagePath)) {
+        throw new Error('Image file does not exist');
+      }
+
+      // Read image file
+      const imageBuffer = fs.readFileSync(imagePath);
+      
+      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const image = {
+        inlineData: {
+          mimeType: this._getMimeType(imagePath),
+          data: imageBuffer.toString("base64")
+        }
+      };
+
+      const result = await model.generateContent([prompt, image]);
+      return result.response.text();
+    } catch (error) {
+      console.error('Image Text Extraction Failed:', error);
+      throw error;
+    }
+  }
+
+  // Determine MIME type based on file extension
+  _getMimeType(filePath) {
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.bmp': 'image/bmp',
+      '.webp': 'image/webp'
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+  }
+
+  // Method to clear cache
+  clearCache() {
+    this.cache.clear();
   }
 }
 

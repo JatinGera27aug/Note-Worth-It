@@ -1,19 +1,18 @@
-
 const multer = require('multer');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // You can change 'public/uploads/' to any directory you want
-    cb(null, 'public/uploads/');
+    
+    cb(null, `public/uploads/`);
   },
   // Define how the file will be named on the server
   filename: function (req, file, cb) {
-    // You must use the 'file' object that multer automatically passes to this function
+
     cb(null, Date.now() + '-' + file.originalname);
   }
 });
 
-const fileSizeLimit = 1024 * 1024 * 100; // 100MB file size limit
+const fileSizeLimit = 1024 * 1024 * 10; // 10MB file size limit
 
 const upload = multer({
   storage: storage,
