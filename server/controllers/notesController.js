@@ -259,7 +259,10 @@ class NotesController {
             }
 
             // extracting description from it
-            const description = notes.description;
+            const description = notes.paraphrased_text && notes.paraphrased_text.trim() !== ""
+            ? notes.paraphrased_text // Use paraphrased_text if available
+            : notes.description; 
+
             // console.log(description);
             const rewriteDescription = await rewrite(description, manner);
             console.log("Rewritten text:", rewriteDescription);
@@ -305,7 +308,8 @@ class NotesController {
     }
 };
 
-    static ImproveGrammar = async (req, res) => {
+    static ImproveGrammar = async (req, res) => {   // frontend mein if no edit, tbtk wo button hi hta dunga improve grammar wala, still can use redis
+
         const { notesId } = req.params;
         const user = req.user._id;
 
@@ -349,6 +353,16 @@ class NotesController {
                 return res.status(404).json("User not found");
             }
 
+            const cachedNote = await redisClient.get(`Note:${notesId}`);
+            if (cachedNote) {
+                console.log("Cached Note Retrieved:");
+                const parsedNote = JSON.parse(cachedNote);
+                return res.status(200).json({ 
+                    message: "Note Found", 
+                    notes: parsedNote 
+                });
+            }
+
             const notes = await Notes.findOne({ _id: notesId, user });
             if (!notes) {
                 return res.status(404).json("No notes found");
@@ -360,6 +374,11 @@ class NotesController {
                     ? notes.paraphrased_text 
                     : notes.description, // Fallback to description
             };
+
+            // Cache the note
+            await redisClient.set(`Note:${notesId}`, JSON.stringify(responseNote), 
+                'EX', 3600
+            );
 
             return res.status(200).json({ message: "Note Found", notes: responseNote });  // frontend par sirf notes.paraphrased_text dikhana hoga ab
 

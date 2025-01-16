@@ -14,7 +14,7 @@ class SummaryController {
         // console.log(userNotes);
 
         if (!userNotes.length) {
-            return { message: "No notes found for the user", summaries: [] };
+            return res.json({ message: "No notes found for the user", summaries: [] });
         }
 
         // Extract note IDs
@@ -30,7 +30,7 @@ class SummaryController {
             });
 
         if (!summaries.length) {
-            return { message: "No summaries found for the user's notes", summaries: [] };
+            return res.json({ message: "No summaries found for the user's notes", summaries: [] });
         }
 
         return res.json({ message: "Summaries fetched successfully", summaries });
@@ -44,6 +44,13 @@ class SummaryController {
     static getNoteSummary = async (req,res) => {
         const noteId = req.params.noteId;
         try {
+            // Check Redis cache first
+            const cachedSummary = await redisClient.get(`Summary:${noteId}`);
+            if (cachedSummary) {
+                console.log("Cached Summary Retrieved:");
+                return res.status(200).json(JSON.parse(cachedSummary));
+            }
+
             const summary = await Summary.findOne({ note: noteId })
                 .populate({
                     path: "note",
@@ -51,14 +58,29 @@ class SummaryController {
                 });
 
             if (!summary) {
-                throw new Error("Summary not found for the specified note. would you like to generate it?");
+                return res.status(404).json({ 
+                    message: "Summary not found for the specified note. Would you like to generate it?",
+                    canGenerate: true 
+                });
             }
+
+             // Cache the summary
+             await redisClient.set(
+                `Summary:${noteId}`, 
+                JSON.stringify(summary), 
+                'EX', 
+                3600 // 1 hour cache expiration
+            );
 
             return res.json({ message: "Summary fetched successfully", summary });
         
     }
     catch(err){
-        res.status(500).json({message: "Internal server error", error: err.message})
+        console.error('Get Note Summary Error:', err);
+            return res.status(500).json({
+                message: "Internal server error", 
+                error: err.message
+            });
     }
 };
 

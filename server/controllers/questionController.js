@@ -25,35 +25,61 @@ class QuestionController {
                 });
 
             if (!questions.length) {
-                return { message: "No questions found for the user's notes", questions: [] };
+                return res.json({ message: "No questions found for the user's notes", questions: [] });
             }
 
             return res.json({ message: "Questions fetched successfully", questions });
         } catch (error) {
             console.error("Error fetching user questions:", error);
-            throw new Error("Failed to fetch user questions");
+            return res.status(500).json({ message: "Failed to fetch User Questions" });
         }
     };
 
     static getQuestions = async (req, res) => {  // of particular note
         const { note } = req.params;
         try {
+
             const isNote = await Notes.findById(note);
             if (!isNote) {
                 return res.status(404).json({ message: "Note not found" });
             }
+
+            // Check Redis cache first
+            const cachedQuestions = await redisClient.get(`Questions:${note}`);
+            if (cachedQuestions) {
+                console.log("Cached Questions Retrieved:");
+                return res.status(200).json(JSON.parse(cachedQuestions));
+            }
+
             const questions = await questionModel.find({ note })
                 .populate({
                     path: "note",
                     select: "title category description",
                 });
 
+            // Handle no questions scenario
             if (questions.length === 0) {
-                return res.status(404).json({ message: "No questions found" });
+                // Cache the empty result to prevent repeated database calls
+                await redisClient.set(
+                    `Questions:${note}`, 
+                    JSON.stringify([]), 
+                    'EX', 
+                    1800 // 30 minutes cache for empty result
+                );
+                return res.status(404).json({ message: "No questions found for the specified note" });
             }
-            res.status(200).json(questions);
+
+            // Cache the questions
+            await redisClient.set(
+                `Questions:${note}`, 
+                JSON.stringify(questions), 
+                'EX', 
+                3600 // 1 hour cache expiration
+            );
+
+            return res.json({ message: "Questions fetched successfully", questions });
         } catch (error) {
-            res.status(500).json({ message: error.message });
+            return res.status(500).json({ message: error.message });
         }
     };
 
