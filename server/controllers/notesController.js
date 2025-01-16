@@ -1,4 +1,5 @@
 const Notes = require('../models/notesModel.js')
+const Context = require('../models/contextModel.js');
 const authModel = require("../models/authModel");
 const { processText, summarizeText, rewrite, improveGrammar } = require('../utils/textProcessor.js')
 const { geminiService } = require('../utils/geminiServices.js')
@@ -177,8 +178,8 @@ class NotesController {
 
             // extracting description from it
             const description = notes.paraphrased_text && notes.paraphrased_text.trim() !== ""
-            ? notes.paraphrased_text // Use paraphrased_text if available
-            : notes.description;      // Fall back to description
+                ? notes.paraphrased_text // Use paraphrased_text if available
+                : notes.description;      // Fall back to description
 
             console.log(description);
             const summary = await summarizeText(description);
@@ -260,8 +261,8 @@ class NotesController {
 
             // extracting description from it
             const description = notes.paraphrased_text && notes.paraphrased_text.trim() !== ""
-            ? notes.paraphrased_text // Use paraphrased_text if available
-            : notes.description; 
+                ? notes.paraphrased_text // Use paraphrased_text if available
+                : notes.description;
 
             // console.log(description);
             const rewriteDescription = await rewrite(description, manner);
@@ -302,11 +303,11 @@ class NotesController {
             await notes.save();
 
             return res.status(200).json({ message: "Undo rewriting", originalNote: notes });
-    }
-    catch(err){
-        res.status(500).json({ message: "Undo rewriting failed", error: err.message });
-    }
-};
+        }
+        catch (err) {
+            res.status(500).json({ message: "Undo rewriting failed", error: err.message });
+        }
+    };
 
     static ImproveGrammar = async (req, res) => {   // frontend mein if no edit, tbtk wo button hi hta dunga improve grammar wala, still can use redis
 
@@ -326,8 +327,8 @@ class NotesController {
 
             // can apply grammar to both description and paraphrased text, priority to paraphrased
             const description = notes.paraphrased_text && notes.paraphrased_text.trim() !== ""
-            ? notes.paraphrased_text // Use paraphrased_text if available
-            : notes.description; 
+                ? notes.paraphrased_text // Use paraphrased_text if available
+                : notes.description;
 
             const correctedText = await improveGrammar(description);
             console.log("Corrected text:", correctedText);
@@ -338,10 +339,10 @@ class NotesController {
 
             return res.status(200).json({ message: "Grammar Improved", correctedText, originalNote: notes });
 
-    }catch(error){
-        res.status(500).json({ message: "Grammar Improvement failed", error: error.message });
-    }
-};
+        } catch (error) {
+            res.status(500).json({ message: "Grammar Improvement failed", error: error.message });
+        }
+    };
 
     static ViewSingleNote = async (req, res) => {
         const { notesId } = req.params;
@@ -357,9 +358,9 @@ class NotesController {
             if (cachedNote) {
                 console.log("Cached Note Retrieved:");
                 const parsedNote = JSON.parse(cachedNote);
-                return res.status(200).json({ 
-                    message: "Note Found", 
-                    notes: parsedNote 
+                return res.status(200).json({
+                    message: "Note Found",
+                    notes: parsedNote
                 });
             }
 
@@ -370,13 +371,13 @@ class NotesController {
 
             const responseNote = {
                 ...notes._doc,
-                paraphrased_text: notes.paraphrased_text && notes.paraphrased_text.trim() !== "" 
-                    ? notes.paraphrased_text 
+                paraphrased_text: notes.paraphrased_text && notes.paraphrased_text.trim() !== ""
+                    ? notes.paraphrased_text
                     : notes.description, // Fallback to description
             };
 
             // Cache the note
-            await redisClient.set(`Note:${notesId}`, JSON.stringify(responseNote), 
+            await redisClient.set(`Note:${notesId}`, JSON.stringify(responseNote),
                 'EX', 3600
             );
 
@@ -388,6 +389,56 @@ class NotesController {
             return res.status(500).json({ message: "Fetching Note Failed", error: error.message });
         }
     };
+
+    static getOrCreateContext = async (req,res) => {
+        const { notesId } = req.params;
+        const user = req.user._id;
+        try {
+
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const note = await Notes.findOne({ _id: notesId, user });
+            if (!note) {
+                return res.status(404).json("Note not found");
+            }
+            // console.log("Note:", note);
+
+            let context = await Context.findOne({ noteId: notesId })
+            .populate({
+                path: "noteId",
+                select: "title category description",
+            });
+
+            // console.log("db",context);  // first time jiska bnega hamesha null hi aayega
+
+            const description = note.description
+            const category = note.category;
+            if (!context) {
+                const extractedContext = await geminiService._extractNoteContext(description, category);
+                console.log(extractedContext);
+                const { keyTopics, educationalLevel, learningGoals, skills } = JSON.parse(extractedContext);
+
+                context = new Context({
+                    noteId: notesId,
+                    keyTopics,
+                    educationalLevel,
+                    learningGoals,
+                    skills,
+                });
+
+                await context.save();
+            }
+
+            // console.log("context:", context);
+            return res.status(200).json({ message: "Context created successfully", context });
+        } catch (error) {
+            console.error('Context creation error:', error);
+            return res.status(500).json({ error: 'Failed to create context' });
+        }
+    }
 
     // image reading (integrated with parent function)
     // static TextfromImage = async (req, res) => {

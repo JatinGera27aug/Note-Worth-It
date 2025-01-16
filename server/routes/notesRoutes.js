@@ -19,5 +19,8 @@ router.patch('/undo-rewrite/:notesId', authMiddleware, NotesController.undoRewri
 
 router.post('/improve-grammar/:notesId', authMiddleware, NotesController.ImproveGrammar);
 
+// context related routes
+router.post('/get-context/:notesId', authMiddleware, NotesController.getOrCreateContext);
+
 
 module.exports = router;

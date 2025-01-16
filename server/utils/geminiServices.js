@@ -124,6 +124,43 @@ class GeminiAIService {
     }
   }
 
+
+  async _extractNoteContext(description, category) {
+    console.log("description",description,"\ncontext", category);
+    try {
+      const contextPrompt = `
+       Analyze the following note description and category:
+
+    Description: ${description}
+    Category: ${category}
+
+    Provide the response in **pure JSON format** using the structure below:
+
+    {
+      "keyTopics": [Array of strings, e.g., "Topic 1", "Topic 2"],
+      "educationalLevel": "Beginner/Intermediate/Advanced",
+      "learningGoals": [Array of strings, e.g., "Goal 1", "Goal 2"],
+      "skills": [Array of strings, e.g., "Skill 1", "Skill 2"]
+    }
+
+    Ensure the output is valid JSON without any additional text or formatting or symbols, or stylistic modifications.
+  `;
+
+  
+      const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+      const result = await model.generateContent(contextPrompt);
+
+      // removing ``` or json tag if any
+      const rawResponse = result.response.text();
+      const cleanedResponse = rawResponse.replace(/```json|```/g, "").trim();
+      // Return the extracted context as plain text
+      return cleanedResponse;
+    } catch (error) {
+      console.error('Context Extraction Error:', error);
+      throw new Error('Failed to extract context from the note.');
+    }
+  }
+
   // Method to clear cache
   clearCache() {
     this.cache.clear();
