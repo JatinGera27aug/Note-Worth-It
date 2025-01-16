@@ -23,9 +23,10 @@ async function processText(text) {
   }
 }
 
-// Additional text processing functions can be added here
+// Summarize text
 async function summarizeText(text) {
-  const prompt = "Provide a concise summary of the following text, highlighting the main points and key insights.";
+  const prompt = `Provide a concise summary of the following text, highlighting the main points and key insights.
+                  Do not include any additional formatting or symbols like asterisks.`;
   
   return await geminiService.generateText(
     text, 
@@ -33,7 +34,19 @@ async function summarizeText(text) {
   );
 }
 
+async function rewrite(text, manner="actual manner as it is") {
+    const prompt = `Simplify the text such that it does not loose its original meaning and holds all the important points in ${manner}
+                    Do not include any additional formatting or symbols like asterisks.`;
+    console.log(manner);
+    
+    return await geminiService.generateText(
+      text, 
+      prompt
+    );
+}
+
 module.exports = {
   processText,
-  summarizeText
+  summarizeText,
+  rewrite,
 };

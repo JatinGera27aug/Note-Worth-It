@@ -13,6 +13,8 @@ connectDB();
 
 const sampleRoutes = require('./routes/sampleRoutes.js')
 const notesRoutes = require('./routes/notesRoutes.js')
+const questionRoutes = require('./routes/questionRoutes.js')
+const summaryRoutes = require('./routes/summaryRoutes.js')
 
 const PORT = 8000 || process.env.PORT;
 
@@ -20,6 +22,8 @@ app.get('/', (req, res) => res.send('HELLO WORLD'));
 
 app.use('/api',sampleRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/questions', questionRoutes);
+app.use('/api/summary', summaryRoutes);
 
 app.listen(PORT, () => {
     console.log("Server is running at http://localhost:8000");

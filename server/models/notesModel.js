@@ -24,6 +24,11 @@ const notesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "auth"
     },
+    paraphrased_text: {  // frontend pr user ctrl z kr skta, but ek baar save krne ke baad, need to show inplace of description
+        // and still can undo this to description, need to null this also, as warna pta kaise chlega kisko permanent rkhna hain for other features
+        type: String,
+        default: null
+    },
     translatedLanguage: {
         type: String,
         default: null

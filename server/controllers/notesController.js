@@ -1,6 +1,6 @@
 const Notes = require('../models/notesModel.js')
 const authModel = require("../models/authModel");
-const { processText, summarizeText } = require('../utils/textProcessor.js')
+const { processText, summarizeText, rewrite } = require('../utils/textProcessor.js')
 const { geminiService } = require('../utils/geminiServices.js')
 const Questions = require('../models/questionModel.js')
 const Summary = require('../models/summaryModel.js')
@@ -176,8 +176,11 @@ class NotesController {
             }
 
             // extracting description from it
-            const description = notes.description;
-            // console.log(description);
+            const description = notes.paraphrased_text && notes.paraphrased_text.trim() !== ""
+            ? notes.paraphrased_text // Use paraphrased_text if available
+            : notes.description;      // Fall back to description
+
+            console.log(description);
             const summary = await summarizeText(description);
             console.log("Text Summary:", summary);
 
@@ -215,7 +218,7 @@ class NotesController {
             }
 
             const translatedDescription = await geminiService.translateText(
-                notes.description, 
+                notes.description,
                 targetLanguage,
             );
             console.log(translatedDescription);
@@ -235,6 +238,101 @@ class NotesController {
         catch (error) {
             console.error('Note Translation Error:', error);
             return res.status(500).json({ message: "Translation failed", error: error.message });
+        }
+    };
+
+    // simplify text with change in manner as well
+    static rewriteNote = async (req, res) => {
+        const { notesId } = req.params;
+        const { manner } = req.body;
+        const user = req.user._id;
+
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const notes = await Notes.findOne({ _id: notesId, user });
+            if (!notes) {
+                return res.status(404).json("No notes found");
+            }
+
+            // extracting description from it
+            const description = notes.description;
+            // console.log(description);
+            const rewriteDescription = await rewrite(description, manner);
+            console.log("Rewritten text:", rewriteDescription);
+
+            // Update the notes
+            notes.paraphrased_text = rewriteDescription;
+            await notes.save();
+
+            return res.status(200).json({ message: "Note Rewritten", rewriteDescription, originalNote: notes });
+
+        }
+        catch (error) {
+            console.error('Note rewriting Error:', error);
+            return res.status(500).json({ message: "Simplifying Note Failed", error: error.message });
+        }
+    };
+
+
+    // undo the rewrite
+    static undoRewrite = async (req, res) => {
+        const { notesId } = req.params;
+        const user = req.user._id;
+
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const notes = await Notes.findOne({ _id: notesId, user });
+            if (!notes) {
+                return res.status(404).json("No notes found");
+            }
+
+            // Update the notes
+            notes.paraphrased_text = "";
+            await notes.save();
+
+            return res.status(200).json({ message: "Undo rewriting", originalNote: notes });
+    }
+    catch(err){
+        res.status(500).json({ message: "Undo rewriting failed", error: err.message });
+    }
+};
+
+    static ViewSingleNote = async (req, res) => {
+        const { notesId } = req.params;
+        const user = req.user._id;
+
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const notes = await Notes.findOne({ _id: notesId, user });
+            if (!notes) {
+                return res.status(404).json("No notes found");
+            }
+
+            const responseNote = {
+                ...notes._doc,
+                paraphrased_text: notes.paraphrased_text && notes.paraphrased_text.trim() !== "" 
+                    ? notes.paraphrased_text 
+                    : notes.description, // Fallback to description
+            };
+
+            return res.status(200).json({ message: "Note Found", notes: responseNote });  // frontend par sirf notes.paraphrased_text dikhana hoga ab
+
+        }
+        catch (error) {
+            console.error('Note fetching Error:', error);
+            return res.status(500).json({ message: "Fetching Note Failed", error: error.message });
         }
     };
 
