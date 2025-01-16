@@ -34,6 +34,7 @@ async function summarizeText(text) {
   );
 }
 
+// paraphrasing
 async function rewrite(text, manner="actual manner as it is") {
     const prompt = `Simplify the text such that it does not loose its original meaning and holds all the important points in ${manner}
                     Do not include any additional formatting or symbols like asterisks.`;
@@ -45,8 +46,21 @@ async function rewrite(text, manner="actual manner as it is") {
     );
 }
 
+// improve grammar and spelling
+async function improveGrammar(text) {
+    const prompt = `Correct the grammar and spelling of the following text. 
+                    Ensure the tone and structure remain unchanged, and do not add extra formatting, symbols, or stylistic modifications. 
+                    Focus only on grammatical accuracy and proper spelling.`;
+
+    return await geminiService.generateText(
+      text, 
+      prompt
+    );
+}
+
 module.exports = {
   processText,
   summarizeText,
   rewrite,
+  improveGrammar,
 };

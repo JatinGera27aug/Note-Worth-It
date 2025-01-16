@@ -17,5 +17,7 @@ router.post('/translate/:notesId', authMiddleware, NotesController.translateNote
 router.post('/rewrite/:notesId', authMiddleware, NotesController.rewriteNote);
 router.patch('/undo-rewrite/:notesId', authMiddleware, NotesController.undoRewrite);
 
+router.post('/improve-grammar/:notesId', authMiddleware, NotesController.ImproveGrammar);
+
 
 module.exports = router;

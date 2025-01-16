@@ -1,6 +1,6 @@
 const Notes = require('../models/notesModel.js')
 const authModel = require("../models/authModel");
-const { processText, summarizeText, rewrite } = require('../utils/textProcessor.js')
+const { processText, summarizeText, rewrite, improveGrammar } = require('../utils/textProcessor.js')
 const { geminiService } = require('../utils/geminiServices.js')
 const Questions = require('../models/questionModel.js')
 const Summary = require('../models/summaryModel.js')
@@ -302,6 +302,40 @@ class NotesController {
     }
     catch(err){
         res.status(500).json({ message: "Undo rewriting failed", error: err.message });
+    }
+};
+
+    static ImproveGrammar = async (req, res) => {
+        const { notesId } = req.params;
+        const user = req.user._id;
+
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const notes = await Notes.findOne({ _id: notesId, user });
+            if (!notes) {
+                return res.status(404).json("No notes found");
+            }
+
+            // can apply grammar to both description and paraphrased text, priority to paraphrased
+            const description = notes.paraphrased_text && notes.paraphrased_text.trim() !== ""
+            ? notes.paraphrased_text // Use paraphrased_text if available
+            : notes.description; 
+
+            const correctedText = await improveGrammar(description);
+            console.log("Corrected text:", correctedText);
+
+            // Update the notes
+            notes.paraphrased_text = correctedText;
+            await notes.save();
+
+            return res.status(200).json({ message: "Grammar Improved", correctedText, originalNote: notes });
+
+    }catch(error){
+        res.status(500).json({ message: "Grammar Improvement failed", error: error.message });
     }
 };
 
