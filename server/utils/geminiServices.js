@@ -65,7 +65,12 @@ class GeminiAIService {
   }
 
   // Image text reading method
-  async readTextFromImage(imagePath, prompt = "Extract all text from this image including headings as well") {
+  async readTextFromImage(imagePath, prompt = `
+    Extract all text from this image including headings as well.
+    Guidelines: 
+    All the text should be extracted not just highlighted words.
+    Ensure the output is in valid text format without any additional formatting or symbols, or stylistic modifications.
+    No starting introduction lines or ending phrases, just the text from image`) {
     try {
       // Validate image file
       if (!fs.existsSync(imagePath)) {
@@ -160,6 +165,67 @@ class GeminiAIService {
       throw new Error('Failed to extract context from the note.');
     }
   }
+
+  // resource generation
+  async suggestResources(context, options = {}) {
+    // console.log("notesId",notesId,"\nuserId", user);
+    try {
+        //Retrieve or generate context
+        // const context = await NotesController.getOrCreateContext(notesId, user);
+        console.log("context2",context);
+
+        const { keyTopics, educationalLevel, learningGoals, skills } = context;
+
+        const prompt = `
+            Using the provided note's context, suggest curated learning resources:
+
+            Key Topics: ${keyTopics.join(', ')}
+            Educational Level: ${educationalLevel}
+            Learning Goals: ${learningGoals.join('; ')}
+            Skills: ${skills.length > 0 ? skills.join(', ') : 'No specific skills identified'}
+
+            Guidelines:
+            1. Prioritize resources that address the key topics and learning goals.
+            2. Ensure relevance to the user's educational level.
+            3. Include diverse resource formats (websites, books, courses, etc.).
+            4. Provide a brief description of each resource and its relevance.
+            5. Assign a relevance score (0-100) based on contextual alignment.
+
+            Output Format (JSON):
+            {
+                "resources": [
+                    {
+                        "title": "Resource Title",
+                        "type": "Website/Book/Course/etc.",
+                        "url": "Direct link",
+                        "description": "Why this resource is relevant",
+                        "relevanceScore": 0-100
+                    }
+                ],
+                "insights": "Brief contextual analysis of suggested resources."
+            }
+        `;
+
+        // Step 3: Generate resources using AI
+        const model = this.genAI.getGenerativeModel({
+            model: "gemini-1.5-pro",
+            generationConfig: { responseMimeType: 'application/json' }
+        });
+
+        const result = await model.generateContent(prompt);
+        const resourceSuggestions = JSON.parse(result.response.text());
+
+        // Optional: Sort by relevance
+        if (options.sortByRelevance !== false) {
+            resourceSuggestions.resources.sort((a, b) => b.relevanceScore - a.relevanceScore);
+        }
+
+        return resourceSuggestions;  // back to controller
+    } catch (error) {
+        console.error('Resource Suggestion Error:', error);
+        throw new Error('Failed to generate resource suggestions');
+    }
+}
 
   // Method to clear cache
   clearCache() {

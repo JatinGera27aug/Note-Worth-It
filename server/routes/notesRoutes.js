@@ -21,6 +21,7 @@ router.post('/improve-grammar/:notesId', authMiddleware, NotesController.Improve
 
 // context related routes
 router.post('/get-context/:notesId', authMiddleware, NotesController.getOrCreateContext);
+router.post('/suggest-resources/:notesId', authMiddleware, NotesController.suggestResources);
 
 
 module.exports = router;

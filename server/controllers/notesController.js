@@ -5,6 +5,7 @@ const { processText, summarizeText, rewrite, improveGrammar } = require('../util
 const { geminiService } = require('../utils/geminiServices.js')
 const Questions = require('../models/questionModel.js')
 const Summary = require('../models/summaryModel.js')
+const Resource = require('../models/resourceModel.js')
 const redisClient = require('../config/redis');
 
 class NotesController {
@@ -390,19 +391,21 @@ class NotesController {
         }
     };
 
-    static getOrCreateContext = async (req,res) => {
-        const { notesId } = req.params;
-        const user = req.user._id;
+    static getOrCreateContext = async(notesId, user)=> {
+        // const { notesId } = req.params;
+        // const user = req.user._id;
         try {
 
             const isUser = await authModel.findById(user);
             if (!isUser) {
-                return res.status(404).json("User not found");
+                // return res.status(404).json("User not found");
+                throw new Error("User not found");
             }
 
             const note = await Notes.findOne({ _id: notesId, user });
             if (!note) {
-                return res.status(404).json("Note not found");
+                // return res.status(404).json("Note not found");
+                throw new Error("Note not found");
             }
             // console.log("Note:", note);
 
@@ -432,12 +435,78 @@ class NotesController {
                 await context.save();
             }
 
-            // console.log("context:", context);
-            return res.status(200).json({ message: "Context created successfully", context });
+            console.log("context:", context);
+            return context; // to use with suggestResources
+
+            // return res.status(200).json({ message: "Context created successfully", context }); // used for api response
         } catch (error) {
             console.error('Context creation error:', error);
-            return res.status(500).json({ error: 'Failed to create context' });
+            // return res.status(500).json({ error: 'Failed to create context' });
+            throw new Error('Failed to create context' );
         }
+    }
+
+    // resource suggestion
+    static suggestResources = async (req, res) => {
+        const { notesId } = req.params;
+        const user = req.user._id;
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const note = await Notes.findOne({ _id: notesId, user });
+            if (!note) {
+                return res.status(404).json("Note not found");
+            }
+
+            const contextForResources = await NotesController.getOrCreateContext(notesId, user);
+
+            // flow: calling gemini-Service and at last return here with the resources
+            const resourceSuggestions = await geminiService.suggestResources(contextForResources);
+            console.log(resourceSuggestions);
+            // for (const resource of resourceSuggestions.resources){console.log(resource.title)}
+
+            const resourceIds = [];
+        for (const resource of resourceSuggestions.resources) {
+            const newResource = new Resource({
+                title: resource.title,
+                type: resource.type,
+                url: resource.url,
+                description: resource.description,
+                relevanceScore: resource.relevanceScore,
+                contextId: contextForResources._id,
+            });
+
+            await newResource.save();
+            resourceIds.push(newResource._id);
+        }
+
+        // Update the context with resource references
+        contextForResources.resources = resourceIds;
+        await contextForResources.save();
+
+            // ```Output Format (JSON):
+            // {
+            //     "resources": [
+            //         {
+            //             "title": "Resource Title",
+            //             "type": "Website/Book/Course/etc.",
+            //             "url": "Direct link",
+            //             "description": "Why this resource is relevant",
+            //             "relevanceScore": 0-100
+            //         }
+            //     ],
+            //     "insights": "Brief contextual analysis of suggested resources."
+            // }```
+
+            return res.status(200).json({ message: "Resource suggestions found", resources: resourceSuggestions, context: contextForResources, note: note.title});
+            }
+            catch (error) {
+                console.error('Resource suggestion error:', error);
+                return res.status(500).json({ error: 'Failed to suggest resources' });
+            }
     }
 
     // image reading (integrated with parent function)
