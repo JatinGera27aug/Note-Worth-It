@@ -8,6 +8,7 @@ const upload = require("../config/multer");
 router.get('/get-notes',authMiddleware, NotesController.getAllNotes);
 router.get('/get-note/:notesId', authMiddleware, NotesController.ViewSingleNote);
 router.post('/create-note', authMiddleware, upload.single('image'),  NotesController.createNotes);
+router.patch('/update-note/:notesId', authMiddleware, NotesController.updateNotes);
 router.get('/question-gen/:notesId', NotesController.NotesToQuestion);
 router.post('/summary/:notesId', NotesController.notesSummary);
 // router.get('/extract-note', NotesController.TextfromImage);
@@ -23,5 +24,7 @@ router.post('/improve-grammar/:notesId', authMiddleware, NotesController.Improve
 router.post('/get-context/:notesId', authMiddleware, NotesController.getOrCreateContext);
 router.post('/suggest-resources/:notesId', authMiddleware, NotesController.suggestResources);
 
+// story related routes
+router.get('/continue-story/:notesId', authMiddleware, NotesController.ContinueStoryText);
 
 module.exports = router;

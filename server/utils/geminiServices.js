@@ -10,7 +10,7 @@ class GeminiAIService {
 
   async generateText(text, prompt, options = {}) {
     try {
-      const model = this.genAI.getGenerativeModel({ 
+      const model = this.genAI.getGenerativeModel({
         model: options.model || "gemini-pro",
         safetySettings: [
           {
@@ -34,7 +34,7 @@ class GeminiAIService {
   // Multi-turn conversation support
   async startChat(history = []) {
     const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
-    
+
     const chat = model.startChat({
       history: history.map(msg => ({
         role: msg.role,
@@ -48,7 +48,7 @@ class GeminiAIService {
   // Image analysis method
   async analyzeImage(imageFile, prompt = "Describe this image in detail") {
     const model = this.genAI.getGenerativeModel({ model: "gemini-pro-vision" });
-    
+
     const image = {
       inlineData: {
         mimeType: "image/jpeg",
@@ -79,9 +79,9 @@ class GeminiAIService {
 
       // Read image file
       const imageBuffer = fs.readFileSync(imagePath);
-      
+
       const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
+
       const image = {
         inlineData: {
           mimeType: this._getMimeType(imagePath),
@@ -116,11 +116,11 @@ class GeminiAIService {
   async translateText(text, targetLanguage, sourceLanguage = 'auto') {
     try {
       const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
-      
-      const prompt = sourceLanguage === 'auto' 
-        ? `Translate the entire text to ${targetLanguage}, preserving its original formatting and meaning.:` 
+
+      const prompt = sourceLanguage === 'auto'
+        ? `Translate the entire text to ${targetLanguage}, preserving its original formatting and meaning.:`
         : `Translate the following text from ${sourceLanguage} to ${targetLanguage}:`;
-  
+
       const result = await model.generateContent(`${prompt}\n\n${text}`);
       return result.response.text();
     } catch (error) {
@@ -131,7 +131,7 @@ class GeminiAIService {
 
 
   async _extractNoteContext(description, category) {
-    console.log("description",description,"\ncontext", category);
+    console.log("description", description, "\ncontext", category);
     try {
       const contextPrompt = `
        Analyze the following note description and category:
@@ -151,7 +151,7 @@ class GeminiAIService {
     Ensure the output is valid JSON without any additional text or formatting or symbols, or stylistic modifications.
   `;
 
-  
+
       const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
       const result = await model.generateContent(contextPrompt);
 
@@ -170,13 +170,13 @@ class GeminiAIService {
   async suggestResources(context, options = {}) {
     // console.log("notesId",notesId,"\nuserId", user);
     try {
-        //Retrieve or generate context
-        // const context = await NotesController.getOrCreateContext(notesId, user);
-        console.log("context2",context);
+      //Retrieve or generate context
+      // const context = await NotesController.getOrCreateContext(notesId, user);
+      console.log("context2", context);
 
-        const { keyTopics, educationalLevel, learningGoals, skills } = context;
+      const { keyTopics, educationalLevel, learningGoals, skills } = context;
 
-        const prompt = `
+      const prompt = `
             Using the provided note's context, suggest curated learning resources:
 
             Key Topics: ${keyTopics.join(', ')}
@@ -206,26 +206,68 @@ class GeminiAIService {
             }
         `;
 
-        // Step 3: Generate resources using AI
-        const model = this.genAI.getGenerativeModel({
-            model: "gemini-1.5-pro",
-            generationConfig: { responseMimeType: 'application/json' }
-        });
+      // Step 3: Generate resources using AI
+      const model = this.genAI.getGenerativeModel({
+        model: "gemini-1.5-pro",
+        generationConfig: { responseMimeType: 'application/json' }
+      });
 
-        const result = await model.generateContent(prompt);
-        const resourceSuggestions = JSON.parse(result.response.text());
+      const result = await model.generateContent(prompt);
+      const resourceSuggestions = JSON.parse(result.response.text());
 
-        // Optional: Sort by relevance
-        if (options.sortByRelevance !== false) {
-            resourceSuggestions.resources.sort((a, b) => b.relevanceScore - a.relevanceScore);
-        }
+      // Optional: Sort by relevance
+      if (options.sortByRelevance !== false) {
+        resourceSuggestions.resources.sort((a, b) => b.relevanceScore - a.relevanceScore);
+      }
 
-        return resourceSuggestions;  // back to controller
+      return resourceSuggestions;  // back to controller
     } catch (error) {
-        console.error('Resource Suggestion Error:', error);
-        throw new Error('Failed to generate resource suggestions');
+      console.error('Resource Suggestion Error:', error);
+      throw new Error('Failed to generate resource suggestions');
     }
-}
+  }
+
+
+  async ContinueStory(description, title, category, options = {}) {
+    try {
+      const prompt = `
+            Continue the story based on the provided description:
+
+            Description: ${description}
+
+            Guidelines:
+            1. Maintain the original tone and style of the story.
+            2. Ensure the continuation flows logically from the provided description.
+            3. Provide three creative ways the storyline can progress. 
+            4. Use descriptive language to enhance the narrative and don't include any special formatting or use of sybmols.
+            5. Limit the continuation to a reasonable length (e.g., 50-100 words).
+            If description not enough you could take some information from the title:${title} and category:${category}
+
+            Output Format (JSON):
+            {
+                "suggestions": [
+                    { "id": 1, "text": "[Your first continuation here]" },
+                    { "id": 2, "text": "[Your second continuation here]" },
+                    { "id": 3, "text": "[Your third continuation here]" }
+                ]
+            }
+        `;
+
+      const model = this.genAI.getGenerativeModel({
+        model: "gemini-1.5-pro",
+        generationConfig: { responseMimeType: 'application/json' }
+      });
+
+      const result = await model.generateContent(prompt);
+      const continuationSuggestions = JSON.parse(result.response.text());
+
+      return continuationSuggestions;
+
+    } catch (error) {
+      console.error('Continuation Suggestion Error:', error);
+      throw new Error('Failed to generate continuation suggestions');
+    }
+  }
 
   // Method to clear cache
   clearCache() {

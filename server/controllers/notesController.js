@@ -100,6 +100,94 @@ class NotesController {
         }
     };
 
+    //update notes with new description
+    static updateNotes = async (req, res) => {
+        const { title, category, description} = req.body;
+        const file = req.file;
+        const user = req.user._id;
+        const notesId = req.params.notesId;
+        // console.log(user.toString())
+        try {
+            if (!description || !user) {
+                return res.status(400).json("Please fill all the fields");
+            }
+
+            const isUser = await authModel.findById(user)
+            if (!isUser) {
+                return res.status(400).json("User not found")
+            }
+
+            const notes = await Notes.findById(notesId)
+            if (!notes) {
+             return res.status(400).json("No notes found")   
+            }
+            // console.log(notes.user.toString())
+
+            if (notes.user.toString() !== user.toString()) {
+                return res.status(401).json("You are not authorized to update this note");
+            }
+
+            const escapeJSONString = (text) => {
+                return JSON.stringify(text); // Escapes special characters automatically
+            };
+            const escapedDescription = escapeJSONString(description); 
+            console.log(escapedDescription !== notes.description)
+            // console.log(title === notes.title)
+            // console.log(category === notes.category)
+
+             // Compare changes to avoid unnecessary updates
+             if ((!category && escapedDescription === notes.description)||  category === notes.category && escapedDescription === notes.description) {
+                 return res.status(400).json({ message: "No changes made to the note" });}
+        //      const hasChanges =
+
+        //      category !== notes.category ||
+        //      escapedDescription !== notes.description;
+
+        //      console.log(hasChanges)
+ 
+        //  if (!hasChanges) {
+        //      return res.status(400).json({ message: "No changes made to the note" });
+        //  }
+ 
+ 
+         // Check for duplicate note
+         const isDuplicate = await Notes.findOne({
+             title: title || notes.title, // Default to existing title if not provided
+             category: category || notes.category, // Default to existing category
+             description: escapedDescription,
+             user,
+         });
+ 
+         // Ensure the duplicate is not the current note
+         if (isDuplicate && isDuplicate._id.toString() !== notesId.toString()) {
+             return res.status(409).json({ message: "Note with similar details already exists" });
+         }
+ 
+         // Update the note
+         const updatedFields = {
+             title: title || notes.title,
+             category: category || notes.category,
+             description: escapedDescription || notes.description,
+             image: file ? file.path : notes.image,
+         };
+ 
+         const updatedNotes = await Notes.findByIdAndUpdate(notesId, updatedFields, { new: true });
+
+        if (!updatedNotes) {
+            return res.status(500).json({ message: "Failed to update the note" });
+        }
+
+            return res.status(200).json({
+                message: "Note updated successfully",
+                note: updatedNotes,
+            });
+            
+            }
+            catch (err) {
+                return res.status(500).json({ message: "Internal Server Error", error: err.message });
+            }
+    };
+
     // question gen. using gemini
     static NotesToQuestion = async (req, res) => {
         const notesId = req.params.notesId;
@@ -464,7 +552,7 @@ class NotesController {
             const contextForResources = await NotesController.getOrCreateContext(notesId, user);
 
             // flow: calling gemini-Service and at last return here with the resources
-            const resourceSuggestions = await geminiService.suggestResources(contextForResources);
+            let resourceSuggestions = await geminiService.suggestResources(contextForResources);
             console.log(resourceSuggestions);
             // for (const resource of resourceSuggestions.resources){console.log(resource.title)}
 
@@ -500,6 +588,12 @@ class NotesController {
             //     ],
             //     "insights": "Brief contextual analysis of suggested resources."
             // }```
+            if (resourceSuggestions.resources.length === 0) {
+                resourceSuggestions = { 
+                    insights: resourceSuggestions.insights || 
+                        "No specific key topics, learning goals, or educational level were provided. Thus, I couldn't curate specific learning resources. Please provide more details about the subject you'd like to learn, what you aim to achieve, and your current educational background."
+                };
+            }
 
             return res.status(200).json({ message: "Resource suggestions found", resources: resourceSuggestions, context: contextForResources, note: note.title});
             }
@@ -508,6 +602,39 @@ class NotesController {
                 return res.status(500).json({ error: 'Failed to suggest resources' });
             }
     }
+
+    static ContinueStoryText = async (req, res) => {
+        const { notesId } = req.params;
+        const user = req.user._id;
+
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const notes = await Notes.findOne({ _id: notesId, user });
+            if (!notes) {
+                return res.status(404).json("No notes found");
+            }
+
+            // extracting description from it
+            const description = notes.paraphrased_text && notes.paraphrased_text.trim() !== ""
+                ? notes.paraphrased_text // Use paraphrased_text if available
+                : notes.description;
+
+            // console.log(description);
+            const continueStoryText = await geminiService.ContinueStory(description, notes.title, notes.category);
+            console.log("Story Continuation Text:", continueStoryText);
+
+            return res.status(200).json({ message: "You can continue with these stories", continueStoryText});
+
+        }
+        catch (error) {
+            console.error('Generating Story Continuation Error:', error);
+            return res.status(500).json({ message: "Error in providing storyline continuations, retry or extend some context", error: error.message });
+        }
+    };
 
     // image reading (integrated with parent function)
     // static TextfromImage = async (req, res) => {
