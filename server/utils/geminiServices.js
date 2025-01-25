@@ -269,6 +269,160 @@ class GeminiAIService {
     }
   }
 
+
+  async SolveProblem(problemInput, options = {}) {
+    try {
+      // Validate input
+      if (!problemInput || problemInput.trim() === '') {
+        throw new Error('No problem input provided');
+      }
+
+      // Choose the most appropriate model for text-based problem solving
+      const model = this.genAI.getGenerativeModel({ 
+        model: "gemini-pro", // Specifically use text model for text input
+        generationConfig: {
+          maxOutputTokens: 2048,
+          temperature: 0.7,
+          topP: 0.9
+        }
+      });
+
+      // Comprehensive prompt for text-based problem solving
+      const fullPrompt = `
+        Advanced Problem Solving Assistant:
+
+        Problem Statement: ${problemInput}
+
+        Detailed Solution Requirements:
+        1. Carefully analyze the entire problem statement
+        2. Break down the solution into clear, step-by-step instructions
+        3. Show all mathematical workings in detail
+        4. Provide the final numerical answer
+        5. Explain the reasoning behind each step
+        6. Highlight any key formulas or principles used
+
+        Solution Format:
+        - Step-by-Step Solution
+        - Detailed Calculations
+        - Final Answer
+        - Explanation of Concepts
+
+        If the problem cannot be solved:
+        - Explain the specific challenges
+        - Suggest alternative approaches
+        - Provide learning resources related to the problem type
+
+        Additional Context:
+        - Ensure the solution is comprehensive
+        - Use clear, educational language
+        - Provide insights that help understanding
+      `;
+
+      // Generate solution
+      const result = await model.generateContent(fullPrompt);
+
+      // Extract response text
+      const responseText = result.response.text();
+
+      // Validate response
+      if (!responseText || responseText.trim() === '') {
+        return {
+          solution: "No solution could be generated. The problem might be too complex or unclear.",
+          steps: [],
+          alternativeSources: this._getAlternativeSources()
+        };
+      }
+
+      // Parse solution steps
+      const steps = this._extractSolutionSteps(responseText);
+
+      // Return structured response
+      return {
+        solution: responseText,
+        steps: steps,
+        alternativeSources: this._getAlternativeSources()
+      };
+    } catch (error) {
+      console.error('Problem Solving Error:', error);
+      
+      // Detailed error logging
+      console.error('Full Error Details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        problemInput: problemInput
+      });
+      
+      // Comprehensive fallback
+      return {
+        solution: `Unable to solve the problem automatically. Error: ${error.message}`,
+        error: error.message,
+        steps: [],
+        alternativeSources: this._getAlternativeSources()
+      };
+    }
+  }
+
+  // Helper method to get alternative sources
+  _getAlternativeSources() {
+    return [
+      {
+        name: "Chegg Study",
+        url: "https://www.chegg.com/study/",
+        description: "Detailed step-by-step solutions for complex problems"
+      },
+      {
+        name: "Symbolab",
+        url: "https://www.symbolab.com/",
+        description: "Advanced mathematical problem solver and calculator"
+      },
+      {
+        name: "Khan Academy",
+        url: "https://www.khanacademy.org/",
+        description: "Free educational resources and problem-solving tutorials"
+      }
+    ];
+  }
+
+  // Helper method to extract solution steps
+  _extractSolutionSteps(responseText) {
+    // More robust step extraction
+    const stepPatterns = [
+      /Step\s*(\d+)[:.]?\s*(.*?)(?=Step \d+|$)/gis,
+      /(\d+)\.\s*(.*?)(?=\d+\.|$)/gis
+    ];
+
+    const steps = [];
+    for (const pattern of stepPatterns) {
+      const matches = [...responseText.matchAll(pattern)];
+      
+      if (matches.length > 0) {
+        matches.forEach((match, index) => {
+          steps.push({
+            stepNumber: parseInt(match[1] || (index + 1)),
+            description: match[2].trim()
+          });
+        });
+        break;
+      }
+    }
+
+    // Fallback if no structured steps found
+    if (steps.length === 0) {
+      // Split by newlines and take first few lines
+      const lines = responseText.split('\n')
+        .filter(line => line.trim() !== '')
+        .slice(0, 3);
+      
+      steps.push({
+        stepNumber: 1,
+        description: lines.join(' ') || 'Detailed solution generated'
+      });
+    }
+
+    return steps;
+  }
+
   // Method to clear cache
   clearCache() {
     this.cache.clear();

@@ -27,4 +27,6 @@ router.post('/suggest-resources/:notesId', authMiddleware, NotesController.sugge
 // story related routes
 router.get('/continue-story/:notesId', authMiddleware, NotesController.ContinueStoryText);
 
+router.get('/solve-problem', authMiddleware, upload.single('problemImage'), NotesController.solveProblem);
+
 module.exports = router;
