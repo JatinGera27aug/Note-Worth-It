@@ -187,7 +187,7 @@ class GeminiAIService {
             Guidelines:
             1. Prioritize resources that address the key topics and learning goals.
             2. Ensure relevance to the user's educational level.
-            3. Include diverse resource formats (websites, books, courses, etc.).
+            3. Include diverse resource formats (websites, books, courses, etc.), if providing url, it must be valid and working .
             4. Provide a brief description of each resource and its relevance.
             5. Assign a relevance score (0-100) based on contextual alignment.
 
