@@ -7,6 +7,7 @@ const Questions = require('../models/questionModel.js')
 const Summary = require('../models/summaryModel.js')
 const Resource = require('../models/resourceModel.js')
 const redisClient = require('../config/redis');
+const {deepseekService} = require('../utils/deepseekServices.js');
 
 class NotesController {
     static getAllNotes = async (req, res) => {
@@ -482,6 +483,7 @@ class NotesController {
     static getOrCreateContext = async(notesId, user)=> {
         // const { notesId } = req.params;
         // const user = req.user._id;
+        console.log("user", user);
         try {
 
             const isUser = await authModel.findById(user);
@@ -551,8 +553,12 @@ class NotesController {
 
             const contextForResources = await NotesController.getOrCreateContext(notesId, user);
 
+
+            const description = note.description
+            const category = note.category;
             // flow: calling gemini-Service and at last return here with the resources
             let resourceSuggestions = await geminiService.suggestResources(contextForResources);
+            // let resourceSuggestions = await deepseekService.generateResourceLinks(description, category, contextForResources);
             console.log(resourceSuggestions);
             // for (const resource of resourceSuggestions.resources){console.log(resource.title)}
 

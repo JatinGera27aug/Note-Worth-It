@@ -60,12 +60,12 @@ class QuestionController {
             // Handle no questions scenario
             if (questions.length === 0) {
                 // Cache the empty result to prevent repeated database calls
-                await redisClient.set(
-                    `Questions:${note}`, 
-                    JSON.stringify([]), 
-                    'EX', 
-                    1800 // 30 minutes cache for empty result
-                );
+                // await redisClient.set(
+                //     `Questions:${note}`, 
+                //     JSON.stringify([]), 
+                //     'EX', 
+                //     1800 // 30 minutes cache for empty result
+                // );
                 return res.status(404).json({ message: "No questions found for the specified note" });
             }
 
