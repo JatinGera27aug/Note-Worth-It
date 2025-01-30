@@ -8,6 +8,13 @@ app.use(express.json({ limit: "10mb" }));
 app.set(express.urlencoded({ extended: true }));
 const cors = require('cors');
 app.use(cors());
+app.use((err, req, res, next) => {
+    console.error(err.stack); // Log full error stack (safe in dev)
+    res.status(500).json({
+      message: err.message || 'Internal Server Error',
+      stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+    });
+  });
 const connectDB = require('./config/dbMongo.js');  // provide db url in .env file
 connectDB();
 
