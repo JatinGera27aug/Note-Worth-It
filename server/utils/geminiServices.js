@@ -424,6 +424,100 @@ class GeminiAIService {
     return steps;
   }
 
+
+  async retryAnswer(problemInput, preferences, wordLimit=50, options = {}) {
+    try {
+      // Validate input
+      if (!problemInput || problemInput.trim() === '') {
+        throw new Error('No problem input provided');
+      }
+
+      // Choose the most appropriate model for text-based problem solving
+      const model = this.genAI.getGenerativeModel({ 
+        model: "gemini-1.5-pro", // Specifically use text model for text input
+        generationConfig: {
+          maxOutputTokens: 2048,
+          temperature: 0.7,
+          topP: 0.9
+        }
+      });
+
+      // Comprehensive prompt for text-based problem solving
+      const fullPrompt = `
+        Advanced Problem Solving Assistant:
+
+        Problem Statement: ${problemInput}
+
+        Detailed Solution Requirements:
+        1. Carefully analyze the entire problem statement
+        2. Structure the solution according to the user’s preference (${preferences}) under word limit of ${wordLimit}:
+          - **Step-by-Step** (Detailed breakdown with explanations)
+          - **Concise Answer** (Final answer with minimal steps)
+          - **Bullet Points** (Key takeaways in a summarized format)
+          - **Detailed Explanation** (Comprehensive reasoning with supporting concepts)
+        3. Show all necessary calculations and highlight formulas if applicable.  
+        4. Ensure clarity with easy-to-follow explanations.  
+        5. Provide relevant insights to enhance understanding.  
+        6. If the question is theoretical, focus on a well-structured explanation aligned with user preferences.  
+        7. If related to maths or physics, provide detailed calculations and explanations but not for simpler calculations like easy arithmetic operation.
+
+        If the problem cannot be solved:
+        - Explain the specific challenges
+        - Suggest alternative approaches
+        - Provide learning resources related to the problem type
+
+        **Output Guidelines:**  
+        - Ensure clarity and an educational tone.  
+        - Use a structured approach for easy comprehension.  
+        - Adapt the response format dynamically based on user preference.  
+      `;
+
+      // Generate solution
+      const result = await model.generateContent(fullPrompt);
+
+      // Extract response text
+      const responseText = result.response.text();
+
+      // Validate response
+      if (!responseText || responseText.trim() === '') {
+        return {
+          solution: "No solution could be generated. The problem might be too complex or unclear.",
+          steps: [],
+          alternativeSources: this._getAlternativeSources()
+        };
+      }
+
+      // Parse solution steps
+      const steps = this._extractSolutionSteps(responseText);
+
+      // Return structured response
+      return {
+        solution: responseText,
+        steps: steps,
+        alternativeSources: this._getAlternativeSources()
+      };
+    } catch (error) {
+      console.error('Problem Solving Error:', error);
+      
+      // Detailed error logging
+      console.error('Full Error Details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        problemInput: problemInput
+      });
+      
+      // Comprehensive fallback
+      return {
+        solution: `Unable to solve the problem automatically. Error: ${error.message}`,
+        error: error.message,
+        steps: [],
+        alternativeSources: this._getAlternativeSources()
+      };
+    }
+  }
+
+
   // Method to clear cache
   clearCache() {
     this.cache.clear();

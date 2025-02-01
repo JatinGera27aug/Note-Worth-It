@@ -158,7 +158,7 @@ class ProblemsController {
 
     static retrySolving = async (req, res) => {
         const user = req.user._id;
-        const { preferences } = req.body;
+        const { preferences, wordLimit } = req.body;
         try {
             if (!user) {
                 return res.status(401).json({ message: "Unauthorized" });
@@ -177,6 +177,27 @@ class ProblemsController {
             const problemText = problem.problem;
             // console.log('Problem Retry Request:', problemText);
 
+            // Solve the problem using Gemini
+            const solution = await geminiService.retryAnswer(problemText, preferences, {
+                context: {
+                    source: 'retry',
+                    userId: req.user._id,
+                    timestamp: new Date().toISOString()
+                }
+            });
+
+            if (!solution) {
+                return res.status(404).json({ message: "Failed to process the request" });
+            }
+
+            // Log solution for debugging
+            console.log('Generated Solution:', {
+                solutionLength: solution.solution ? solution.solution.length : 0,
+                stepCount: solution.steps ? solution.steps.length : 0
+            });
+
+
+            return res.json({ message: "Problem solved successfully", solution });
 
         }
         catch (error) {
