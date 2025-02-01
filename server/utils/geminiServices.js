@@ -11,7 +11,7 @@ class GeminiAIService {
   async generateText(text, prompt, options = {}) {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: options.model || "gemini-pro",
+        model: options.model || "gemini-1.5-pro",
         safetySettings: [
           {
             category: 'HARM_CATEGORY_HATE_SPEECH',
@@ -115,7 +115,7 @@ class GeminiAIService {
   // text translation
   async translateText(text, targetLanguage, sourceLanguage = 'auto') {
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
       const prompt = sourceLanguage === 'auto'
         ? `Translate the entire text to ${targetLanguage}, preserving its original formatting and meaning.:`
@@ -152,7 +152,7 @@ class GeminiAIService {
   `;
 
 
-      const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       const result = await model.generateContent(contextPrompt);
 
       // removing ``` or json tag if any
@@ -279,7 +279,7 @@ class GeminiAIService {
 
       // Choose the most appropriate model for text-based problem solving
       const model = this.genAI.getGenerativeModel({ 
-        model: "gemini-pro", // Specifically use text model for text input
+        model: "gemini-1.5-pro", // Specifically use text model for text input
         generationConfig: {
           maxOutputTokens: 2048,
           temperature: 0.7,
@@ -300,6 +300,7 @@ class GeminiAIService {
         4. Provide the final numerical answer
         5. Explain the reasoning behind each step
         6. Highlight any key formulas or principles used
+        7. If that's a not a math problem but based on theory, provide a detailed solution with explanation no steps required.
 
         Solution Format:
         - Step-by-Step Solution

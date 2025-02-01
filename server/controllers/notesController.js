@@ -12,6 +12,7 @@ const {deepseekService} = require('../utils/deepseekServices.js');
 class NotesController {
     static getAllNotes = async (req, res) => {
         const user = req.user._id;
+        console.log(user);
         try {
             const notes = await Notes.find({ user })
             if (!notes) {
@@ -27,11 +28,14 @@ class NotesController {
     static createNotes = async (req, res) => {
         const { title, category, description, imagePath } = req.body;
         const user = req.user._id;
-        console.log('User ID:', req.user._id); // Check user ID
-        // console.log('User:', req.user); // Check user object
+        // const user = '6786ddafd019bf888189c7b9'; // hardcoded for testing
+        // console.log('User ID:', req.user._id); // Check user ID
+        // console.log('User:', user); // Check user object
 
         const file = req.file;
         console.log('File:', file);
+
+        // console.log(title,category,description);
 
         try {
             if (!title || !category || !user) {
