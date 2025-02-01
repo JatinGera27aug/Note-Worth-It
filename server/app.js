@@ -22,6 +22,7 @@ const sampleRoutes = require('./routes/sampleRoutes.js')
 const notesRoutes = require('./routes/notesRoutes.js')
 const questionRoutes = require('./routes/questionRoutes.js')
 const summaryRoutes = require('./routes/summaryRoutes.js')
+const problemRoutes = require('./routes/problemsRoutes.js')
 
 const PORT = 8000 || process.env.PORT;
 
@@ -31,6 +32,7 @@ app.use('/api',sampleRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/summary', summaryRoutes);
+app.use('/api/problems', problemRoutes);
 
 app.listen(PORT, () => {
     console.log("Server is running at http://localhost:8000");
