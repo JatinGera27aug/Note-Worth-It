@@ -7,7 +7,7 @@ const resourceSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ["Book", "Website", "Video", "Article", "Course", "Podcast", "Website/Social Media", "Blog", "Educational Platform", "Online Learning", "Other"], // Expandable as needed
+        enum: ["Book", "Website", "Video", "Article", "Course", "Podcast", "Website/Social Media", "Blog", "Educational Platform", "Online Learning", "Other", "Report"], // Expandable as needed
         required: true,
     },
     url: {

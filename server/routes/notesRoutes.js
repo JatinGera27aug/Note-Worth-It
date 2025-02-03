@@ -23,6 +23,7 @@ router.post('/improve-grammar/:notesId', authMiddleware, NotesController.Improve
 // context related routes
 router.post('/get-context/:notesId', authMiddleware, NotesController.getOrCreateContext);
 router.post('/suggest-resources/:notesId', authMiddleware, NotesController.suggestResources);
+router.post('/resources/:notesId', authMiddleware, NotesController.suggestResourcesSerper);
 
 // story related routes
 router.get('/continue-story/:notesId', authMiddleware, NotesController.ContinueStoryText);

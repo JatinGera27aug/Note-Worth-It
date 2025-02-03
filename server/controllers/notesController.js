@@ -8,6 +8,7 @@ const Summary = require('../models/summaryModel.js')
 const Resource = require('../models/resourceModel.js')
 const redisClient = require('../config/redis');
 const {deepseekService} = require('../utils/deepseekServices.js');
+const {serperResourceService} = require('../utils/serperServices.js');
 
 class NotesController {
     static getAllNotes = async (req, res) => {
@@ -529,7 +530,7 @@ class NotesController {
                 await context.save();
             }
 
-            console.log("context:", context);
+            console.log("context:", context.keyTopics);
             return context; // to use with suggestResources
 
             // return res.status(200).json({ message: "Context created successfully", context }); // used for api response
@@ -612,6 +613,40 @@ class NotesController {
                 return res.status(500).json({ error: 'Failed to suggest resources' });
             }
     }
+
+    // resource suggestion using Serper API
+    static suggestResourcesSerper = async (req, res) => {
+        const { notesId } = req.params;
+        const user = req.user._id;
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            const note = await Notes.findOne({ _id: notesId, user });
+            if (!note) {
+                return res.status(404).json("Note not found");
+            }
+
+            const contextForResources = await NotesController.getOrCreateContext(notesId, user);
+            const contextKeyTopics = contextForResources.keyTopics;
+            // console.log(contextKeyTopics);
+
+            // sending parameter to outer func, but getting value from inner func
+            const resourceSuggestions = await serperResourceService(contextKeyTopics);
+            
+            console.log(resourceSuggestions);
+            return res.json({ message: "Resource suggestions found", resources: resourceSuggestions });
+
+        } catch (error) {
+            console.error('Error:', error);
+            return res.status(500).json({ error: 'Failed to fetch resources' });
+        }
+
+    }
+
+    // story continuation
 
     static ContinueStoryText = async (req, res) => {
         const { notesId } = req.params;
