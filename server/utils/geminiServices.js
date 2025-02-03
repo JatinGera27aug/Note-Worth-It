@@ -185,6 +185,7 @@ class GeminiAIService {
             Skills: ${skills.length > 0 ? skills.join(', ') : 'No specific skills identified'}
 
             Guidelines:
+            Get the links after searching from google or any other search engine.
             1. Prioritize resources that address the key topics and learning goals.
             2. Ensure relevance to the user's educational level.
             3. Include diverse resource formats (websites, books, courses, etc.), if providing url, it must be valid and working .
@@ -450,7 +451,7 @@ class GeminiAIService {
 
         Detailed Solution Requirements:
         1. Carefully analyze the entire problem statement
-        2. Structure the solution according to the user’s preference (${preferences}) under word limit of ${wordLimit}:
+        2. Structure the solution according to the user's preference (${preferences}) under word limit of ${wordLimit}:
           - **Step-by-Step** (Detailed breakdown with explanations)
           - **Concise Answer** (Final answer with minimal steps)
           - **Bullet Points** (Key takeaways in a summarized format)
