@@ -1,3 +1,63 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /* Current Theme (Default) */
+  .theme-current {
+    --color-primary: theme('colors.current.500');
+    --color-secondary: theme('colors.current.300');
+    --color-background: theme('colors.current.50');
+    --color-text: theme('colors.current.900');
+    
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: theme('fontFamily.current');
+  }
+
+  /* Snowman Theme */
+  .theme-snowman {
+    --color-primary: theme('colors.snowman.500');
+    --color-secondary: theme('colors.snowman.300');
+    --color-background: theme('colors.snowman.50');
+    --color-text: theme('colors.snowman.900');
+    
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: theme('fontFamily.snowman');
+  }
+}
+
+@layer components {
+  .theme-current .btn-primary {
+    @apply bg-current-500 text-white hover:bg-current-600;
+  }
+
+  .theme-snowman .btn-primary {
+    @apply bg-snowman-500 text-white hover:bg-snowman-600;
+  }
+
+  /* Snowfall Animation */
+  @keyframes fall {
+    0% {
+      opacity: 0.7;
+      transform: translateY(-20px) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(100vh) rotate(360deg);
+    }
+  }
+
+  .snowflake {
+    position: absolute;
+    top: -20px;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    animation: fall linear forwards;
+    animation-duration: 7s;
+    z-index: 0;
+    text-shadow: 0 0 5px rgba(255,255,255,0.5);
+  }
+}
