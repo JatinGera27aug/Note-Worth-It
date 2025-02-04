@@ -7,8 +7,9 @@ const resourceSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ["Book", "Website", "Video", "Article", "Course", "Podcast", "Website/Social Media", "Blog", "Educational Platform", "Online Learning", "Other", "Report"], // Expandable as needed
-        required: true,
+        // enum: ["Book", "Blog Post", "Article", "Video", "Website", "Course", "Educational Platform", "Online Learning", "Report", "Podcast", "Website/Social Media","Educational Platform", "Other", "Book Chapter", "Video", "Course Material", "Unknown"], // Expandable as needed
+        // required: true,
+        default: "Other",
     },
     url: {
         type: String,
@@ -27,6 +28,7 @@ const resourceSchema = new mongoose.Schema({
         ref: "Context",
         required: true,
     },
+    includeInsights: { type: Boolean, default: false }, // Flag for insights
 }, { timestamps: true });
 
 const Resource = mongoose.model("Resource", resourceSchema);

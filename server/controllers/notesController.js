@@ -9,6 +9,7 @@ const Resource = require('../models/resourceModel.js')
 const redisClient = require('../config/redis');
 const {deepseekService} = require('../utils/deepseekServices.js');
 const {serperResourceService} = require('../utils/serperServices.js');
+const crypto = require('crypto');
 
 class NotesController {
     static getAllNotes = async (req, res) => {
@@ -618,6 +619,7 @@ class NotesController {
     static suggestResourcesSerper = async (req, res) => {
         const { notesId } = req.params;
         const user = req.user._id;
+        const includeInsights = req.query.includeInsights === "true";
         try {
             const isUser = await authModel.findById(user);
             if (!isUser) {
@@ -633,11 +635,100 @@ class NotesController {
             const contextKeyTopics = contextForResources.keyTopics;
             // console.log(contextKeyTopics);
 
+        const cacheKey = `Resource:${crypto.createHash('sha256').update(contextKeyTopics.join(",")).digest('hex')}`;
+        const countKey = `Resource:${cacheKey}`;
+
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            console.log("Serving from cache");
+            return res.json(JSON.parse(cachedData));
+        }
+
             // sending parameter to outer func, but getting value from inner func
-            const resourceSuggestions = await serperResourceService(contextKeyTopics);
+            const rawResourceSuggestions = await serperResourceService(contextKeyTopics);
             
-            console.log(resourceSuggestions);
-            return res.json({ message: "Resource suggestions found", resources: resourceSuggestions });
+            console.log(rawResourceSuggestions);
+
+            if (!rawResourceSuggestions || rawResourceSuggestions.length === 0) {
+                return res.status(404).json({ message: "No resources found via Serper." });
+            }
+
+        let finalResources = [];
+        const resourceIds = [];
+
+        if(includeInsights) {
+            // using gemini to enrich resources
+            const enrichedResources = await geminiService.enrichResources(rawResourceSuggestions, contextForResources);
+
+            if(!enrichedResources || enrichedResources.resources.length === 0) {
+                return res.status(200).json({ message: "Resource suggestions found but with no insights", resources: rawResourceSuggestions });
+            }
+
+            finalResources = enrichedResources.resources;
+
+        // for (const resource of enrichedResources.resources) {
+        //     const newResource = new Resource({
+        //         title: resource.title,
+        //         type: resource.type || "Other",
+        //         url: resource.url,
+        //         description: resource.description,
+        //         relevanceScore: resource.relevanceScore,
+        //         contextId: contextForResources._id,
+        //         includeInsights: true,  // Mark as having insights
+        //     });
+
+        //     await newResource.save();
+        //     resourceIds.push(newResource._id);
+        // }
+
+        // ---- making the above process async in bg and not blocking the response and combining for both types as well
+
+        } else {
+        // Store raw resources (only title & URL, no insights)
+        finalResources = rawResourceSuggestions.map(resource => ({
+                title: resource.title,
+                url: resource.link
+            }));
+            // await redisClient.set(cacheKey, JSON.stringify(responseData), "EX", 86400); 
+
+        }
+
+        const responseData = {
+            message: "Resource suggestions found",
+            resources: finalResources,
+            note: note.title,
+            includeInsights: includeInsights
+        };
+        await redisClient.set(cacheKey, JSON.stringify(responseData), "EX", 86400); 
+
+        process.nextTick(async () => {
+            try {
+                for (const resource of finalResources) {
+                    const newResource = new Resource({
+                        title: resource.title,
+                        url: resource.url,
+                        type: includeInsights ? resource.type || "Other" : "Unknown",
+                        description: includeInsights ? resource.description : null,
+                        relevanceScore: includeInsights ? resource.relevanceScore : null,
+                        contextId: contextForResources._id,
+                        includeInsights: includeInsights
+                    });
+
+                    await newResource.save();
+                    resourceIds.push(newResource._id);
+                    console.log('db mei store baadme');
+                }
+
+                // 🔹 Update Context Resources
+                contextForResources.resources = resourceIds;
+                await contextForResources.save();
+            } catch (dbError) {
+                console.error("Database save error:", dbError);
+            }
+        });
+
+        console.log('data send pehle');
+        return res.json({ message: "Resource suggestions found", resources: responseData });
 
         } catch (error) {
             console.error('Error:', error);
