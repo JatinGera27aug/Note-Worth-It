@@ -229,6 +229,53 @@ class GeminiAIService {
   }
 
 
+  async enrichResources(resources, context) {
+    try {
+        const { keyTopics, educationalLevel, learningGoals, skills } = context;
+
+        const prompt = `
+        Enhance the following resources by adding a short description and a relevance score (0-100) based on this context:
+
+        **Context:**
+        - Key Topics: ${keyTopics.join(", ")}
+        - Educational Level: ${educationalLevel}
+        - Learning Goals: ${learningGoals.join("; ")}
+        - Skills: ${skills.length > 0 ? skills.join(", ") : "No specific skills identified"}
+
+        **Resources to Enhance:**
+        ${resources.map((r, index) => `${index + 1}. Title: ${r.title}, URL: ${r.link}`).join("\n")}
+
+        **Guidelines:**
+        - Ensure the description is **concise** and **highlights relevance**.
+        - Assign a **relevance score (0-100)**.
+        - Keep the JSON format.
+
+        **Output Format:**
+        {
+            "resources": [
+                {
+                    "title": "Resource Title",
+                    "type": "Website/Book/Course/etc.",
+                    "url": "Direct link",
+                    "description": "Why this resource is relevant",
+                    "relevanceScore": 0-100
+                }
+            ]
+        }
+        `;
+
+        // Call Gemini
+        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro", generationConfig: { responseMimeType: "application/json" } });
+        const result = await model.generateContent(prompt);
+        const enrichedData = JSON.parse(result.response.text());
+       console.log("enrichedData", enrichedData);
+        return enrichedData;
+    } catch (error) {
+        console.error("Gemini Enhancement Error:", error);
+        throw new Error("Failed to enhance resources");
+    }
+}
+
   async ContinueStory(description, title, category, options = {}) {
     try {
       const prompt = `
