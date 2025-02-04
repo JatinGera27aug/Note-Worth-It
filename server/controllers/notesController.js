@@ -7,9 +7,11 @@ const Questions = require('../models/questionModel.js')
 const Summary = require('../models/summaryModel.js')
 const Resource = require('../models/resourceModel.js')
 const redisClient = require('../config/redis');
-const {deepseekService} = require('../utils/deepseekServices.js');
-const {serperResourceService} = require('../utils/serperServices.js');
+const { deepseekService } = require('../utils/deepseekServices.js');
+const { serperResourceService } = require('../utils/serperServices.js');
 const crypto = require('crypto');
+const { scrapeArticles } = require('../utils/scraper.js');
+const notesModel = require('../models/notesModel.js');
 
 class NotesController {
     static getAllNotes = async (req, res) => {
@@ -109,7 +111,7 @@ class NotesController {
 
     //update notes with new description
     static updateNotes = async (req, res) => {
-        const { title, category, description} = req.body;
+        const { title, category, description } = req.body;
         const file = req.file;
         const user = req.user._id;
         const notesId = req.params.notesId;
@@ -126,7 +128,7 @@ class NotesController {
 
             const notes = await Notes.findById(notesId)
             if (!notes) {
-             return res.status(400).json("No notes found")   
+                return res.status(400).json("No notes found")
             }
             // console.log(notes.user.toString())
 
@@ -137,62 +139,63 @@ class NotesController {
             const escapeJSONString = (text) => {
                 return JSON.stringify(text); // Escapes special characters automatically
             };
-            const escapedDescription = escapeJSONString(description); 
+            const escapedDescription = escapeJSONString(description);
             console.log(escapedDescription !== notes.description)
             // console.log(title === notes.title)
             // console.log(category === notes.category)
 
-             // Compare changes to avoid unnecessary updates
-             if ((!category && escapedDescription === notes.description)||  category === notes.category && escapedDescription === notes.description) {
-                 return res.status(400).json({ message: "No changes made to the note" });}
-        //      const hasChanges =
+            // Compare changes to avoid unnecessary updates
+            if ((!category && escapedDescription === notes.description) || category === notes.category && escapedDescription === notes.description) {
+                return res.status(400).json({ message: "No changes made to the note" });
+            }
+            //      const hasChanges =
 
-        //      category !== notes.category ||
-        //      escapedDescription !== notes.description;
+            //      category !== notes.category ||
+            //      escapedDescription !== notes.description;
 
-        //      console.log(hasChanges)
- 
-        //  if (!hasChanges) {
-        //      return res.status(400).json({ message: "No changes made to the note" });
-        //  }
- 
- 
-         // Check for duplicate note
-         const isDuplicate = await Notes.findOne({
-             title: title || notes.title, // Default to existing title if not provided
-             category: category || notes.category, // Default to existing category
-             description: escapedDescription,
-             user,
-         });
- 
-         // Ensure the duplicate is not the current note
-         if (isDuplicate && isDuplicate._id.toString() !== notesId.toString()) {
-             return res.status(409).json({ message: "Note with similar details already exists" });
-         }
- 
-         // Update the note
-         const updatedFields = {
-             title: title || notes.title,
-             category: category || notes.category,
-             description: escapedDescription || notes.description,
-             image: file ? file.path : notes.image,
-         };
- 
-         const updatedNotes = await Notes.findByIdAndUpdate(notesId, updatedFields, { new: true });
+            //      console.log(hasChanges)
 
-        if (!updatedNotes) {
-            return res.status(500).json({ message: "Failed to update the note" });
-        }
+            //  if (!hasChanges) {
+            //      return res.status(400).json({ message: "No changes made to the note" });
+            //  }
+
+
+            // Check for duplicate note
+            const isDuplicate = await Notes.findOne({
+                title: title || notes.title, // Default to existing title if not provided
+                category: category || notes.category, // Default to existing category
+                description: escapedDescription,
+                user,
+            });
+
+            // Ensure the duplicate is not the current note
+            if (isDuplicate && isDuplicate._id.toString() !== notesId.toString()) {
+                return res.status(409).json({ message: "Note with similar details already exists" });
+            }
+
+            // Update the note
+            const updatedFields = {
+                title: title || notes.title,
+                category: category || notes.category,
+                description: escapedDescription || notes.description,
+                image: file ? file.path : notes.image,
+            };
+
+            const updatedNotes = await Notes.findByIdAndUpdate(notesId, updatedFields, { new: true });
+
+            if (!updatedNotes) {
+                return res.status(500).json({ message: "Failed to update the note" });
+            }
 
             return res.status(200).json({
                 message: "Note updated successfully",
                 note: updatedNotes,
             });
-            
-            }
-            catch (err) {
-                return res.status(500).json({ message: "Internal Server Error", error: err.message });
-            }
+
+        }
+        catch (err) {
+            return res.status(500).json({ message: "Internal Server Error", error: err.message });
+        }
     };
 
     // question gen. using gemini
@@ -486,7 +489,7 @@ class NotesController {
         }
     };
 
-    static getOrCreateContext = async(notesId, user)=> {
+    static getOrCreateContext = async (notesId, user) => {
         // const { notesId } = req.params;
         // const user = req.user._id;
         console.log("user", user);
@@ -506,10 +509,10 @@ class NotesController {
             // console.log("Note:", note);
 
             let context = await Context.findOne({ noteId: notesId })
-            .populate({
-                path: "noteId",
-                select: "title category description",
-            });
+                .populate({
+                    path: "noteId",
+                    select: "title category description",
+                });
 
             // console.log("db",context);  // first time jiska bnega hamesha null hi aayega
 
@@ -538,7 +541,7 @@ class NotesController {
         } catch (error) {
             console.error('Context creation error:', error);
             // return res.status(500).json({ error: 'Failed to create context' });
-            throw new Error('Failed to create context' );
+            throw new Error('Failed to create context');
         }
     }
 
@@ -569,23 +572,23 @@ class NotesController {
             // for (const resource of resourceSuggestions.resources){console.log(resource.title)}
 
             const resourceIds = [];
-        for (const resource of resourceSuggestions.resources) {
-            const newResource = new Resource({
-                title: resource.title,
-                type: resource.type,
-                url: resource.url,
-                description: resource.description,
-                relevanceScore: resource.relevanceScore,
-                contextId: contextForResources._id,
-            });
+            for (const resource of resourceSuggestions.resources) {
+                const newResource = new Resource({
+                    title: resource.title,
+                    type: resource.type,
+                    url: resource.url,
+                    description: resource.description,
+                    relevanceScore: resource.relevanceScore,
+                    contextId: contextForResources._id,
+                });
 
-            await newResource.save();
-            resourceIds.push(newResource._id);
-        }
+                await newResource.save();
+                resourceIds.push(newResource._id);
+            }
 
-        // Update the context with resource references
-        contextForResources.resources = resourceIds;
-        await contextForResources.save();
+            // Update the context with resource references
+            contextForResources.resources = resourceIds;
+            await contextForResources.save();
 
             // ```Output Format (JSON):
             // {
@@ -601,18 +604,18 @@ class NotesController {
             //     "insights": "Brief contextual analysis of suggested resources."
             // }```
             if (resourceSuggestions.resources.length === 0) {
-                resourceSuggestions = { 
-                    insights: resourceSuggestions.insights || 
+                resourceSuggestions = {
+                    insights: resourceSuggestions.insights ||
                         "No specific key topics, learning goals, or educational level were provided. Thus, I couldn't curate specific learning resources. Please provide more details about the subject you'd like to learn, what you aim to achieve, and your current educational background."
                 };
             }
 
-            return res.status(200).json({ message: "Resource suggestions found", resources: resourceSuggestions, context: contextForResources, note: note.title});
-            }
-            catch (error) {
-                console.error('Resource suggestion error:', error);
-                return res.status(500).json({ error: 'Failed to suggest resources' });
-            }
+            return res.status(200).json({ message: "Resource suggestions found", resources: resourceSuggestions, context: contextForResources, note: note.title });
+        }
+        catch (error) {
+            console.error('Resource suggestion error:', error);
+            return res.status(500).json({ error: 'Failed to suggest resources' });
+        }
     }
 
     // resource suggestion using Serper API
@@ -635,100 +638,100 @@ class NotesController {
             const contextKeyTopics = contextForResources.keyTopics;
             // console.log(contextKeyTopics);
 
-        const cacheKey = `Resource:${crypto.createHash('sha256').update(contextKeyTopics.join(",")).digest('hex')}`;
-        const countKey = `Resource:${cacheKey}`;
+            const cacheKey = `Resource:${crypto.createHash('sha256').update(contextKeyTopics.join(",")).digest('hex')}`;
+            const countKey = `Resource:${cacheKey}`;
 
-        const cachedData = await redisClient.get(cacheKey);
-        if (cachedData) {
-            console.log("Serving from cache");
-            return res.json(JSON.parse(cachedData));
-        }
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                console.log("Serving from cache");
+                return res.json(JSON.parse(cachedData));
+            }
 
             // sending parameter to outer func, but getting value from inner func
             const rawResourceSuggestions = await serperResourceService(contextKeyTopics);
-            
+
             console.log(rawResourceSuggestions);
 
             if (!rawResourceSuggestions || rawResourceSuggestions.length === 0) {
                 return res.status(404).json({ message: "No resources found via Serper." });
             }
 
-        let finalResources = [];
-        const resourceIds = [];
+            let finalResources = [];
+            const resourceIds = [];
 
-        if(includeInsights) {
-            // using gemini to enrich resources
-            const enrichedResources = await geminiService.enrichResources(rawResourceSuggestions, contextForResources);
+            if (includeInsights) {
+                // using gemini to enrich resources
+                const enrichedResources = await geminiService.enrichResources(rawResourceSuggestions, contextForResources);
 
-            if(!enrichedResources || enrichedResources.resources.length === 0) {
-                return res.status(200).json({ message: "Resource suggestions found but with no insights", resources: rawResourceSuggestions });
-            }
-
-            finalResources = enrichedResources.resources;
-
-        // for (const resource of enrichedResources.resources) {
-        //     const newResource = new Resource({
-        //         title: resource.title,
-        //         type: resource.type || "Other",
-        //         url: resource.url,
-        //         description: resource.description,
-        //         relevanceScore: resource.relevanceScore,
-        //         contextId: contextForResources._id,
-        //         includeInsights: true,  // Mark as having insights
-        //     });
-
-        //     await newResource.save();
-        //     resourceIds.push(newResource._id);
-        // }
-
-        // ---- making the above process async in bg and not blocking the response and combining for both types as well
-
-        } else {
-        // Store raw resources (only title & URL, no insights)
-        finalResources = rawResourceSuggestions.map(resource => ({
-                title: resource.title,
-                url: resource.link
-            }));
-            // await redisClient.set(cacheKey, JSON.stringify(responseData), "EX", 86400); 
-
-        }
-
-        const responseData = {
-            message: "Resource suggestions found",
-            resources: finalResources,
-            note: note.title,
-            includeInsights: includeInsights
-        };
-        await redisClient.set(cacheKey, JSON.stringify(responseData), "EX", 86400); 
-
-        process.nextTick(async () => {
-            try {
-                for (const resource of finalResources) {
-                    const newResource = new Resource({
-                        title: resource.title,
-                        url: resource.url,
-                        type: includeInsights ? resource.type || "Other" : "Unknown",
-                        description: includeInsights ? resource.description : null,
-                        relevanceScore: includeInsights ? resource.relevanceScore : null,
-                        contextId: contextForResources._id,
-                        includeInsights: includeInsights
-                    });
-
-                    await newResource.save();
-                    resourceIds.push(newResource._id);
-                    console.log('db mei store baadme');
+                if (!enrichedResources || enrichedResources.resources.length === 0) {
+                    return res.status(200).json({ message: "Resource suggestions found but with no insights", resources: rawResourceSuggestions });
                 }
 
-                // 🔹 Update Context Resources
-                contextForResources.resources = resourceIds;
-                await contextForResources.save();
-            } catch (dbError) {
-                console.error("Database save error:", dbError);
-            }
-        });
+                finalResources = enrichedResources.resources;
 
-        console.log('data send pehle');
-        return res.json({ message: "Resource suggestions found", resources: responseData });
+                // for (const resource of enrichedResources.resources) {
+                //     const newResource = new Resource({
+                //         title: resource.title,
+                //         type: resource.type || "Other",
+                //         url: resource.url,
+                //         description: resource.description,
+                //         relevanceScore: resource.relevanceScore,
+                //         contextId: contextForResources._id,
+                //         includeInsights: true,  // Mark as having insights
+                //     });
+
+                //     await newResource.save();
+                //     resourceIds.push(newResource._id);
+                // }
+
+                // ---- making the above process async in bg and not blocking the response and combining for both types as well
+
+            } else {
+                // Store raw resources (only title & URL, no insights)
+                finalResources = rawResourceSuggestions.map(resource => ({
+                    title: resource.title,
+                    url: resource.link
+                }));
+                // await redisClient.set(cacheKey, JSON.stringify(responseData), "EX", 86400); 
+
+            }
+
+            const responseData = {
+                message: "Resource suggestions found",
+                resources: finalResources,
+                note: note.title,
+                includeInsights: includeInsights
+            };
+            await redisClient.set(cacheKey, JSON.stringify(responseData), "EX", 86400);
+
+            process.nextTick(async () => {
+                try {
+                    for (const resource of finalResources) {
+                        const newResource = new Resource({
+                            title: resource.title,
+                            url: resource.url,
+                            type: includeInsights ? resource.type || "Other" : "Unknown",
+                            description: includeInsights ? resource.description : null,
+                            relevanceScore: includeInsights ? resource.relevanceScore : null,
+                            contextId: contextForResources._id,
+                            includeInsights: includeInsights
+                        });
+
+                        await newResource.save();
+                        resourceIds.push(newResource._id);
+                        console.log('db mei store baadme');
+                    }
+
+                    // 🔹 Update Context Resources
+                    contextForResources.resources = resourceIds;
+                    await contextForResources.save();
+                } catch (dbError) {
+                    console.error("Database save error:", dbError);
+                }
+            });
+
+            console.log('data send pehle');
+            return res.json({ message: "Resource suggestions found", resources: responseData });
 
         } catch (error) {
             console.error('Error:', error);
@@ -763,7 +766,7 @@ class NotesController {
             const continueStoryText = await geminiService.ContinueStory(description, notes.title, notes.category);
             console.log("Story Continuation Text:", continueStoryText);
 
-            return res.status(200).json({ message: "You can continue with these stories", continueStoryText});
+            return res.status(200).json({ message: "You can continue with these stories", continueStoryText });
 
         }
         catch (error) {
@@ -772,7 +775,72 @@ class NotesController {
         }
     };
 
-    
+
+    // Current Affairs Notes Creation
+    static CurrentAffairsNotes = async (req, res) => {
+        const user = req.user._id;
+        const { url } = req.body;
+
+        try {
+            const isUser = await authModel.findById(user);
+            if (!isUser) {
+                return res.status(404).json("User not found");
+            }
+
+            if (!url) {
+                return res.status(400).json({ error: "URL is required" });
+            }
+
+            const articles = await scrapeArticles(url);
+            console.log(articles);
+            if (articles.message) {
+                return res.status(404).json({ message: articles.message });
+            }
+
+            // const existingNote = await notesModel.findOne({ title: articleTitle });
+
+            // if (existingNote) {
+            //     console.log("Note already exists:", articleTitle);
+            //     return existingNote; // Don't create duplicate
+            // }
+
+
+            // Save articles to the database
+            const savedNotes = await notesModel.insertMany(
+                articles.map(article => ({
+                    title: article.title,
+                    category: "Current-Affairs-adda24/7-special",
+                    description: article.content,
+                    user: user
+                }))
+            );
+
+            res.status(201).json({ message: "Articles saved successfully", data: savedNotes });
+
+        } catch (error) {
+            return res.status(500).json({ message: "Error in generating Current Affairs Notes", error: error.message });
+        }
+
+    }
+
+
+    // Current Affairs Notes Fetching
+    static getCurrentAffairsNotes = async (req, res) => {
+        try {
+            const filters = { category: "Current-Affairs-adda24/7-special" };
+
+            // Date filter or other filters can be added here
+
+            const notes = await notesModel.find(filters).sort({ createdAt: -1 });
+
+            res.status(200).json(notes);
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching notes", error });
+        }
+    };
+
+
+
 
     // image reading (integrated with parent function)
     // static TextfromImage = async (req, res) => {

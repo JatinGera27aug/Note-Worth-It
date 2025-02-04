@@ -25,8 +25,11 @@ router.post('/get-context/:notesId', authMiddleware, NotesController.getOrCreate
 router.post('/suggest-resources/:notesId', authMiddleware, NotesController.suggestResources);
 router.post('/resources/:notesId', authMiddleware, NotesController.suggestResourcesSerper);
 
-// story related routes
+// story/poem related routes
 router.get('/continue-story/:notesId', authMiddleware, NotesController.ContinueStoryText);
+
+// current affairs notes gen routes
+router.post('/current-affairs-notes', authMiddleware, NotesController.CurrentAffairsNotes);
 
 
 
