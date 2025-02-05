@@ -44,6 +44,17 @@ const Navbar = ({
           themeButtonUnscrolled: 'bg-white/20 text-white hover:bg-white/30',
           themeButtonScrolled: 'bg-blue-100 text-blue-900 hover:bg-blue-200'
         };
+        case 'theme-dark':
+        return {
+          unscrolled: 'bg-gradient-to-r from-dark-700 to-dark-900',
+          scrolled: 'bg-gradient-to-r from-dark-800 to-dark-900 backdrop-blur-lg shadow-dark-luxe',
+          activeItemUnscrolled: 'bg-gray-700/30 text-gray-100',
+          activeItemScrolled: 'bg-dark-700 text-gray-100',
+          inactiveItemUnscrolled: 'text-gray-400 hover:bg-gray-700/20 hover:text-white',
+          inactiveItemScrolled: 'text-gray-300 hover:bg-dark-600 hover:text-white',
+          themeButtonUnscrolled: 'bg-gray-700/20 text-gray-100 hover:bg-gray-700/30',
+          themeButtonScrolled: 'bg-dark-700 text-gray-100 hover:bg-dark-600'
+        };
       default:
         return {};
     }

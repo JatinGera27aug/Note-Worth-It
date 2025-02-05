@@ -6,7 +6,7 @@
   /* Current Theme (Default) */
   .theme-current {
     --color-primary: theme('colors.current.500');
-    --color-secondary: theme('colors.current.300');
+    --color-secondary: theme('colors.current.400');
     --color-background: theme('colors.current.50');
     --color-text: theme('colors.current.900');
     
@@ -17,14 +17,59 @@
 
   /* Snowman Theme */
   .theme-snowman {
-    --color-primary: theme('colors.snowman.500');
-    --color-secondary: theme('colors.snowman.300');
-    --color-background: theme('colors.snowman.50');
-    --color-text: theme('colors.snowman.900');
+    --color-primary: theme('colors.blue.500');
+    --color-secondary: theme('colors.blue.400');
+    --color-background: #F0F4F8;
+    --color-text: #1E293B;
     
     background-color: var(--color-background);
     color: var(--color-text);
     font-family: theme('fontFamily.snowman');
+  }
+
+  /* Dark Theme */
+  .theme-dark {
+    --color-primary: theme('colors.blue.600');
+    --color-secondary: theme('colors.blue.500');
+    --color-background: #0F172A;
+    --color-text: #E2E8F0;
+    
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: theme('fontFamily.dark');
+  }
+
+  /* Theme-specific card styles */
+  .theme-current .card {
+    @apply bg-white text-black;
+  }
+
+  .theme-dark .card {
+    @apply bg-dark-700 text-gray-200 shadow-lg;
+  }
+
+  .theme-snowman .card {
+    @apply bg-white text-gray-900 shadow-md;
+  }
+
+  /* Snowfall Animation */
+  @keyframes fall {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(100vh);
+      opacity: 1;
+    }
+  }
+
+  .snowflake {
+    position: absolute;
+    color: white;
+    animation: fall linear infinite;
+    z-index: 0;
+    text-shadow: 0 0 5px rgba(255,255,255,0.5);
   }
 }
 
@@ -37,27 +82,29 @@
     @apply bg-snowman-500 text-white hover:bg-snowman-600;
   }
 
-  /* Snowfall Animation */
-  @keyframes fall {
-    0% {
-      opacity: 0.7;
-      transform: translateY(-20px) rotate(0deg);
-    }
-    100% {
-      opacity: 0;
-      transform: translateY(100vh) rotate(360deg);
-    }
+  .theme-dark .btn-primary {
+    @apply bg-dark-700 text-gray-100 hover:bg-dark-600;
+  }
+  
+
+  /* Dark Theme Component Styles */
+  .theme-dark .input {
+    @apply bg-dark-600 text-gray-100 border-dark-500 focus:ring-blue-500 focus:border-blue-500;
   }
 
-  .snowflake {
-    position: absolute;
-    top: -20px;
-    left: 0;
-    width: 20px;
-    height: 20px;
-    animation: fall linear forwards;
-    animation-duration: 7s;
-    z-index: 0;
-    text-shadow: 0 0 5px rgba(255,255,255,0.5);
+  .theme-dark .dropdown {
+    @apply bg-dark-700 text-gray-200 shadow-lg;
   }
+}
+
+/* Global theme transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0.3s;
+  transition-timing-function: ease-in-out;
+}
+
+body, html {
+  transition: background-color 0.3s ease-in-out, 
+              color 0.3s ease-in-out;
 }

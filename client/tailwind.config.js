@@ -34,15 +34,29 @@ export default {
           700: '#0369a1',  // Dark winter blue
           800: '#075985',  // Midnight winter blue
           900: '#0c4a6e',  // Deepest winter blue
+        },
+        dark: {
+          50: '#1e293b',   // Deep slate blue-gray
+          100: '#334155',  // Slate gray
+          200: '#475569',  // Muted slate
+          300: '#64748b',  // Stone gray
+          400: '#1e293b',  // Deep background
+          500: '#0f172a',  // Almost black with blue undertones
+          600: '#0e1525',  // Slightly lighter deep blue-black
+          700: '#1e293b',  // Rich dark slate
+          800: '#273244',  // Soft dark blue-gray
+          900: '#374151',  // Dark charcoal gray
         }
       },
       fontFamily: {
         current: ['Inter', 'sans-serif'],
-        snowman: ['Inter', 'sans-serif']
+        snowman: ['Inter', 'sans-serif'],
+        dark: ['Inter', 'sans-serif']
       },
       boxShadow: {
         'current-subtle': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        'snowman-soft': '0 4px 6px -1px rgba(135, 206, 235, 0.3), 0 2px 4px -1px rgba(135, 206, 235, 0.2)'
+        'snowman-soft': '0 4px 6px -1px rgba(135, 206, 235, 0.3), 0 2px 4px -1px rgba(135, 206, 235, 0.2)',
+        'dark-luxe': '0 10px 20px rgba(0, 0, 0, 0.3), 0 6px 6px rgba(49, 46, 46, 0.23)'
       }
     },
   },
