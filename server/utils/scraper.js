@@ -8,7 +8,11 @@ const headers = {
 };
 
 // Target URL
-const url = "https://currentaffairs.adda247.com/2025/02/";
+// const url = "https://currentaffairs.adda247.com/2025/02/";   -- monthly wale kuch jo aate 10 wo done,,, ise daily basis pr update
+//  cronjob lgakar bas aaj ki date se 1 din pehle wali likh kar done
+// https://currentaffairs.adda247.com/latest-posts/    -- like saare hi hain, par pagination lgegi so selenium shyd use krni pde
+
+// https://currentaffairs.adda247.com/national-current-affairs/ -- ye sirf national wale, jo krna chaiye mujhe retrieve, pagination hai but shyad na lgani pde
 
 async function titleCase(str) {
     var splitStr = str.toLowerCase().split(' ');
@@ -90,7 +94,7 @@ const scrapeArticles = async (url) => {
 
     const articles = [];
 
-    for (let i = 0; i < Math.min(8, articleLinks.length); i++) { // Scrape only 2 articles
+    for (let i = 0; i < Math.min(8, articleLinks.length); i++) {
         const articleTitle = await titleCase(articleLinks[i].slice(35, -1));
         const content = await getArticleContent(articleLinks[i]);
 

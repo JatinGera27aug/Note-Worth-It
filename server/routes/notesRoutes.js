@@ -30,6 +30,7 @@ router.get('/continue-story/:notesId', authMiddleware, NotesController.ContinueS
 
 // current affairs notes gen routes
 router.post('/current-affairs-notes', authMiddleware, NotesController.CurrentAffairsNotes);
+router.get('/current-affairs-notes', authMiddleware, NotesController.getCurrentAffairsNotes);
 
 
 
